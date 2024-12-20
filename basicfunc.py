@@ -157,8 +157,9 @@ def normal(data=None, bin_centers=None, counts=None, xlabel="X-axis", ylabel="Y-
         plt.show()
 
     plot = [x_fit, y_fit, bin_centers, counts]
+    ints = [integral, integral_uncertainty]
 
-    return params, uncertainties, residui, chi_quadro, reduced_chi_quadro, integral, plot
+    return params, uncertainties, residui, chi_quadro, reduced_chi_quadro, ints, plot
 
 #SOTTRAZIONE BACKGROUND
 def background(data, fondo, bins=None, xlabel="X-axis", ylabel="Counts", titolo='Title'):
