@@ -240,24 +240,10 @@ def compton_minuit(data=None, bin_centers=None, counts=None, xlabel="X-axis", yl
     sigma = mfit.values['sigma']
     lower_bound = mu - n * sigma
     upper_bound = mu + n * sigma
-
-    # Calcolare l'area sotto la curva nell'intervallo definito
-    area_mask = (x_fit >= lower_bound) & (x_fit <= upper_bound)
-    integral = np.trapz(y_fit[area_mask], x_fit[area_mask])
-
-    # Calcolare l'errore sull'integrale usando la propagazione degli errori
-    # L'errore sull'integrale dipende dalle incertezze sui parametri del fit
-    def integral_error(mu_err, sigma_err, rate_err, bkg_err):
-        # Propagazione dell'errore sugli integrali
-        # In questo caso consideriamo l'errore sui parametri mu, sigma, rate, bkg
-        integral_error = np.sqrt(
-            (np.gradient(y_fit, x_fit) ** 2) * (mu_err ** 2 + sigma_err ** 2 + rate_err ** 2 + bkg_err ** 2)
-        )
-        return np.sqrt(np.sum(integral_error ** 2))
-
-    integral_err = integral_error(mfit.errors['mu'], mfit.errors['sigma'], mfit.errors['rate'], mfit.errors['bkg'])
-
-    print(f"Integrale nell'intervallo [{lower_bound}, {upper_bound}] = {integral} ± {integral_err}")
+    bins_to_integrate = (bin_centers >= lower_bound) & (bin_centers <= upper_bound)  # il return è un array booleano con true e false che poi si mette come maskera
+    integral = np.sum(counts[bins_to_integrate])
+    integral_uncertainty = np.sqrt(np.sum(sigma_counts[bins_to_integrate]**2))
+    print(f"Integrale dell'istogramma nel range [{lower_bound}, {upper_bound}] = {integral} ± {integral_uncertainty}")
 
     # Plot dei dati e del fit
     if plot == 'yes':
@@ -270,12 +256,12 @@ def compton_minuit(data=None, bin_centers=None, counts=None, xlabel="X-axis", yl
         if x1 is not None and x2 is not None:
             plt.xlim(x1, x2)
         # Impostare ylim in modo sensato
-        plt.ylim(0, np.max(counts) * 1.1) 
+        plt.ylim(0, np.max(counts)+1)
         plt.grid(alpha=0.5)
         plt.legend()
         plt.show()
 
-    int = [integral, integral_err]
+    int = [integral, integral_uncertainty]
 
     return mfit.values, mfit.errors, int
 
@@ -318,7 +304,8 @@ def compton_curvefit(data=None, bin_centers=None, counts=None, xlabel="X-axis", 
         return rate * erfc((x - mu) / sigma) + bkg
 
     # Parametri iniziali per curve_fit
-    initial_guess = [np.mean(bin_centers_fit), np.std(bin_centers_fit), np.max(counts_fit), np.min(counts_fit)]
+    initial_guess = [np.median(bin_centers_fit), 5, np.max(counts_fit), np.min(counts_fit)]
+    # initial_guess = [np.mean(bin_centers_fit), np.std(bin_centers_fit), np.max(counts_fit), np.min(counts_fit)]
 
     # Esegui il fit
     params, cov_matrix = curve_fit(fit_function, bin_centers_fit, counts_fit, p0=initial_guess, sigma=sigma_counts_fit)
@@ -339,22 +326,10 @@ def compton_curvefit(data=None, bin_centers=None, counts=None, xlabel="X-axis", 
     # Calcolare l'integrale nell'intervallo mu ± n*sigma
     lower_bound = mu - n * sigma
     upper_bound = mu + n * sigma
-
-    # Calcolare l'area sotto la curva nell'intervallo definito
-    area_mask = (x_fit >= lower_bound) & (x_fit <= upper_bound)
-    integral = np.trapz(y_fit[area_mask], x_fit[area_mask])
-
-    # Calcolare l'errore sull'integrale usando la propagazione degli errori
-    def integral_error(mu_err, sigma_err, rate_err, bkg_err):
-        # Propagazione dell'errore sugli integrali
-        integral_error = np.sqrt(
-            (np.gradient(y_fit, x_fit) ** 2) * (mu_err ** 2 + sigma_err ** 2 + rate_err ** 2 + bkg_err ** 2)
-        )
-        return np.sqrt(np.sum(integral_error ** 2))
-
-    integral_err = integral_error(uncertainties[0], uncertainties[1], uncertainties[2], uncertainties[3])
-
-    print(f"Integrale nell'intervallo [{lower_bound}, {upper_bound}] = {integral} ± {integral_err}")
+    bins_to_integrate = (bin_centers >= lower_bound) & (bin_centers <= upper_bound)  # il return è un array booleano con true e false che poi si mette come maskera
+    integral = np.sum(counts[bins_to_integrate])
+    integral_uncertainty = np.sqrt(np.sum(sigma_counts[bins_to_integrate]**2))
+    print(f"Integrale dell'istogramma nel range [{lower_bound}, {upper_bound}] = {integral} ± {integral_uncertainty}")
 
     # Plot dei dati e del fit
     if plot == 'yes':
@@ -366,12 +341,12 @@ def compton_curvefit(data=None, bin_centers=None, counts=None, xlabel="X-axis", 
         if x1 is not None and x2 is not None:
             plt.xlim(x1, x2)
         # Impostare ylim in modo sensato
-        plt.ylim(0, np.max(counts) * 1.1) 
+        plt.ylim(0, np.max(counts)+1)
         plt.grid(alpha=0.5)
         plt.legend()
         plt.show()
 
-    int = [integral, integral_err]
+    int = [integral, integral_uncertainty]
 
     return params, uncertainties, int
 
