@@ -243,16 +243,14 @@ def compton_minuit(data=None, bin_centers=None, counts=None, xlabel="X-axis", yl
 
     # Calcolare l'area sotto la curva nell'intervallo definito
     area_mask = (x_fit >= lower_bound) & (x_fit <= upper_bound)
-    integral = np.trapz(y_fit[area_mask], x_fit[area_mask])
+    integral = int(np.trapz(y_fit[area_mask], x_fit[area_mask]))
     # L'errore sull'integrale dipende dalle incertezze sui parametri del fit
     def integral_error(mu_err, sigma_err, rate_err, bkg_err):
         # Propagazione dell'errore sugli integrali
         # In questo caso consideriamo l'errore sui parametri mu, sigma, rate, bkg
-        integral_error = np.sqrt(
-            (np.gradient(y_fit, x_fit) ** 2) * (mu_err ** 2 + sigma_err ** 2 + rate_err ** 2 + bkg_err ** 2)
-        )
+        integral_error = np.sqrt((np.gradient(y_fit, x_fit) ** 2) * (mu_err ** 2 + sigma_err ** 2 + rate_err ** 2 + bkg_err ** 2))
         return np.sqrt(np.sum(integral_error ** 2))
-    integral_err = integral_error(mfit.errors['mu'], mfit.errors['sigma'], mfit.errors['rate'], mfit.errors['bkg'])
+    integral_err = int(integral_error(mfit.errors['mu'], mfit.errors['sigma'], mfit.errors['rate'], mfit.errors['bkg']))
     print(f"Integrale nell'intervallo [{lower_bound}, {upper_bound}] = {integral} ± {integral_err}")
 
     # Plot dei dati e del fit
@@ -340,8 +338,7 @@ def compton_curvefit(data=None, bin_centers=None, counts=None, xlabel="X-axis", 
 
     # Calcolare l'area sotto la curva nell'intervallo definito
     area_mask = (x_fit >= lower_bound) & (x_fit <= upper_bound)
-    integral = np.trapz(y_fit[area_mask], x_fit[area_mask])
-
+    integral = int(np.trapz(y_fit[area_mask], x_fit[area_mask]))
     # Calcolare l'errore sull'integrale usando la propagazione degli errori
     def integral_error(mu_err, sigma_err, rate_err, bkg_err):
         # Propagazione dell'errore sugli integrali
@@ -350,7 +347,7 @@ def compton_curvefit(data=None, bin_centers=None, counts=None, xlabel="X-axis", 
         )
         return np.sqrt(np.sum(integral_error ** 2))
 
-    integral_err = integral_error(uncertainties[0], uncertainties[1], uncertainties[2], uncertainties[3])
+    integral_err = int(integral_error(uncertainties[0], uncertainties[1], uncertainties[2], uncertainties[3]))
 
     print(f"Integrale nell'intervallo [{lower_bound}, {upper_bound}] = {integral} ± {integral_err}")
 
