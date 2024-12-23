@@ -239,6 +239,11 @@ def compton_minuit(data=None, bin_centers=None, counts=None, xlabel="X-axis", yl
     if plot == 'yes':
         plt.bar(bin_centers, counts, width=(bin_centers[1] - bin_centers[0]), alpha=0.6, label="Data")
         plt.plot(x_fit, y_fit, label='Error function fit', color='red', lw=2)
+        plt.ylim(0, 5000)
+        if x1 is not None and x2 is not None:  # limiti asse x
+            plt.xlim(x1, x2)
+        else:
+            plt.xlim(mfit.values['mu'] - 3 * mfit.values['sigma'], mfit.values['mu'] + 3 * mfit.values['sigma'])
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
         plt.title(titolo)
@@ -310,6 +315,11 @@ def compton_curvefit(data=None, bin_centers=None, counts=None, xlabel="X-axis", 
     if plot == 'yes':
         plt.bar(bin_centers, counts, width=(bin_centers[1] - bin_centers[0]), alpha=0.6, label="Data")
         plt.plot(x_fit, y_fit, label='Error function fit', color='red', lw=2)
+        plt.ylim(0, 5000)
+        if x1 is not None and x2 is not None:  # limiti asse x
+            plt.xlim(x1, x2)
+        else:
+            plt.xlim(mu - 3 * sigma, mu + 3 * sigma)
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
         plt.title(titolo)
