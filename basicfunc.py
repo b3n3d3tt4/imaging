@@ -235,11 +235,31 @@ def compton_minuit(data=None, bin_centers=None, counts=None, xlabel="X-axis", yl
     x_fit = np.linspace(xmin, xmax, 1000)
     y_fit = fit_function(x_fit, *mfit.values)
 
+    # Calcolare l'integrale nell'intervallo mu ± n*sigma
+    mu = mfit.values['mu']
+    sigma = mfit.values['sigma']
+    lower_bound = mu - n * sigma
+    upper_bound = mu + n * sigma
+
+    # Calcolare l'area sotto la curva nell'intervallo definito
+    area_mask = (x_fit >= lower_bound) & (x_fit <= upper_bound)
+    integral = np.trapz(y_fit[area_mask], x_fit[area_mask])
+    # L'errore sull'integrale dipende dalle incertezze sui parametri del fit
+    def integral_error(mu_err, sigma_err, rate_err, bkg_err):
+        # Propagazione dell'errore sugli integrali
+        # In questo caso consideriamo l'errore sui parametri mu, sigma, rate, bkg
+        integral_error = np.sqrt(
+            (np.gradient(y_fit, x_fit) ** 2) * (mu_err ** 2 + sigma_err ** 2 + rate_err ** 2 + bkg_err ** 2)
+        )
+        return np.sqrt(np.sum(integral_error ** 2))
+    integral_err = integral_error(mfit.errors['mu'], mfit.errors['sigma'], mfit.errors['rate'], mfit.errors['bkg'])
+    print(f"Integrale nell'intervallo [{lower_bound}, {upper_bound}] = {integral} ± {integral_err}")
+
     # Plot dei dati e del fit
     if plot == 'yes':
         plt.bar(bin_centers, counts, width=(bin_centers[1] - bin_centers[0]), alpha=0.6, label="Data")
         plt.plot(x_fit, y_fit, label='Error function fit', color='red', lw=2)
-        plt.ylim(0, 5000)
+        plt.ylim(0, 7000)
         if x1 is not None and x2 is not None:  # limiti asse x
             plt.xlim(x1, x2)
         else:
@@ -251,7 +271,9 @@ def compton_minuit(data=None, bin_centers=None, counts=None, xlabel="X-axis", yl
         plt.legend()
         plt.show()
 
-    return mfit.values, mfit.errors
+        int = [integral, integral_err]
+
+    return mfit.values, mfit.errors, int
 
 #fit spalla compton con curve_fit
 def compton_curvefit(data=None, bin_centers=None, counts=None, xlabel="X-axis", ylabel="Y-axis", titolo='title', 
@@ -300,6 +322,7 @@ def compton_curvefit(data=None, bin_centers=None, counts=None, xlabel="X-axis", 
     # Parametri ottimizzati
     mu, sigma, rate, bkg = params
     mu_err, sigma_err, rate_err, bkg_err = np.sqrt(np.diag(covariance))
+    uncertainties = np.sqrt(np.diag(covariance))
 
     print("Parametri ottimizzati con curve_fit:")
     print(f"mu = {mu} ± {mu_err}")
@@ -311,11 +334,31 @@ def compton_curvefit(data=None, bin_centers=None, counts=None, xlabel="X-axis", 
     x_fit = np.linspace(xmin, xmax, 1000)
     y_fit = fit_function(x_fit, *params)
 
+    # Calcolare l'integrale nell'intervallo mu ± n*sigma
+    lower_bound = mu - n * sigma
+    upper_bound = mu + n * sigma
+
+    # Calcolare l'area sotto la curva nell'intervallo definito
+    area_mask = (x_fit >= lower_bound) & (x_fit <= upper_bound)
+    integral = np.trapz(y_fit[area_mask], x_fit[area_mask])
+
+    # Calcolare l'errore sull'integrale usando la propagazione degli errori
+    def integral_error(mu_err, sigma_err, rate_err, bkg_err):
+        # Propagazione dell'errore sugli integrali
+        integral_error = np.sqrt(
+            (np.gradient(y_fit, x_fit) ** 2) * (mu_err ** 2 + sigma_err ** 2 + rate_err ** 2 + bkg_err ** 2)
+        )
+        return np.sqrt(np.sum(integral_error ** 2))
+
+    integral_err = integral_error(uncertainties[0], uncertainties[1], uncertainties[2], uncertainties[3])
+
+    print(f"Integrale nell'intervallo [{lower_bound}, {upper_bound}] = {integral} ± {integral_err}")
+
     # Plot dei dati e del fit
     if plot == 'yes':
         plt.bar(bin_centers, counts, width=(bin_centers[1] - bin_centers[0]), alpha=0.6, label="Data")
         plt.plot(x_fit, y_fit, label='Error function fit', color='red', lw=2)
-        plt.ylim(0, 5000)
+        plt.ylim(0, 7000)
         if x1 is not None and x2 is not None:  # limiti asse x
             plt.xlim(x1, x2)
         else:
