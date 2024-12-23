@@ -6,7 +6,9 @@ from scipy.optimize import curve_fit
 import inspect
 from scipy.stats import norm
 from iminuit import Minuit
+import iminuit
 from iminuit.cost import LeastSquares
+from scipy.special import erfc
 
 def gaussian(x, amp, mu, sigma):
     # return amp * np.exp(-0.5 * ((x - mu) / sigma)**2)
@@ -160,6 +162,162 @@ def normal(data=None, bin_centers=None, counts=None, xlabel="X-axis", ylabel="Y-
     ints = [integral, integral_uncertainty]
 
     return params, uncertainties, residui, chi_quadro, reduced_chi_quadro, ints, plot
+
+#fit spalla compton
+def compton_minuit(data=None, bin_centers=None, counts=None, xlabel="X-axis", ylabel="Y-axis", titolo='title', 
+                   xmin=None, xmax=None, x1=None, x2=None, b=None, n=None, plot='yes'):
+    if data is not None:
+        frame = inspect.currentframe().f_back
+        var_name = [name for name, val in frame.f_locals.items() if val is data][0]
+
+        # Calcolo bin
+        if b is not None:
+            bins = b
+        else:
+            bins = calculate_bins(data)
+
+        counts, bin_edges = np.histogram(data, bins=bins, density=False)
+        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+    elif bin_centers is not None and counts is not None:
+        var_name = "custom_data"
+        bin_edges = None
+    else:
+        raise ValueError("Devi fornire o `data`, o `bin_centers` e `counts`.")
+
+    sigma_counts = np.sqrt(counts)  # Errori sulle y
+
+    # Range per il fit
+    if xmin is not None and xmax is not None:
+        fit_mask = (bin_centers >= xmin) & (bin_centers <= xmax)
+        bin_centers_fit = bin_centers[fit_mask]
+        counts_fit = counts[fit_mask]
+        sigma_counts_fit = sigma_counts[fit_mask]
+    else:
+        bin_centers_fit = bin_centers
+        counts_fit = counts
+        sigma_counts_fit = sigma_counts
+
+    # Funzione error function (erfc)
+    def fit_function(x, mu, sigma, rate, bkg):
+        return rate * erfc((x - mu) / sigma) + bkg
+
+    # Funzione chi-quadro per il fit
+    def chi2(y_data, y_model, sigma):
+        return np.sum(((y_data - y_model) / sigma) ** 2)
+
+    # Funzione di costo per Minuit
+    def cost_function(mu, sigma, rate, bkg):
+        y_model = fit_function(bin_centers_fit, mu, sigma, rate, bkg)
+        return chi2(counts_fit, y_model, sigma_counts_fit)
+
+    # Parametri iniziali per Minuit
+    theta0 = [np.mean(bin_centers_fit), np.std(bin_centers_fit), np.max(counts_fit), np.min(counts_fit)]
+
+    # Inizializzare Minuit
+    mfit = iminuit.Minuit(cost_function, *theta0, name=['mu', 'sigma', 'rate', 'bkg'])
+    mfit.errordef = mfit.LEAST_SQUARES
+    mfit.limits['mu'] = (xmin, xmax)
+    mfit.limits['sigma'] = (0, np.max(bin_centers_fit))
+    mfit.limits['rate'] = (0, np.max(counts_fit))
+    mfit.limits['bkg'] = (0, None)
+
+    # Eseguire il fit
+    mfit.migrad()
+
+    # Parametri ottimizzati
+    print("Parametri ottimizzati con Minuit:")
+    print(f"mu = {mfit.values['mu']} ± {mfit.errors['mu']}")
+    print(f"sigma = {mfit.values['sigma']} ± {mfit.errors['sigma']}")
+    print(f"rate = {mfit.values['rate']} ± {mfit.errors['rate']}")
+    print(f"bkg = {mfit.values['bkg']} ± {mfit.errors['bkg']}")
+
+    # Generare il modello con i parametri ottimizzati
+    x_fit = np.linspace(xmin, xmax, 1000)
+    y_fit = fit_function(x_fit, *mfit.values)
+
+    # Plot dei dati e del fit
+    if plot == 'yes':
+        plt.bar(bin_centers, counts, width=(bin_centers[1] - bin_centers[0]), alpha=0.6, label="Data")
+        plt.plot(x_fit, y_fit, label='Error function fit', color='red', lw=2)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.title(titolo)
+        plt.grid(True)
+        plt.legend()
+        plt.show()
+
+    return mfit.values, mfit.errors
+
+#fit spalla compton con curve_fit
+def compton_curvefit(data=None, bin_centers=None, counts=None, xlabel="X-axis", ylabel="Y-axis", titolo='title', 
+                     xmin=None, xmax=None, x1=None, x2=None, b=None, n=None, plot='yes'):
+    if data is not None:
+        frame = inspect.currentframe().f_back
+        var_name = [name for name, val in frame.f_locals.items() if val is data][0]
+
+        # Calcolo bin
+        if b is not None:
+            bins = b
+        else:
+            bins = calculate_bins(data)
+
+        counts, bin_edges = np.histogram(data, bins=bins, density=False)
+        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+    elif bin_centers is not None and counts is not None:
+        var_name = "custom_data"
+        bin_edges = None
+    else:
+        raise ValueError("Devi fornire o `data`, o `bin_centers` e `counts`.")
+
+    sigma_counts = np.sqrt(counts)  # Errori sulle y
+
+    # Range per il fit
+    if xmin is not None and xmax is not None:
+        fit_mask = (bin_centers >= xmin) & (bin_centers <= xmax)
+        bin_centers_fit = bin_centers[fit_mask]
+        counts_fit = counts[fit_mask]
+        sigma_counts_fit = sigma_counts[fit_mask]
+    else:
+        bin_centers_fit = bin_centers
+        counts_fit = counts
+        sigma_counts_fit = sigma_counts
+
+    # Funzione error function (erfc)
+    def fit_function(x, mu, sigma, rate, bkg):
+        return rate * erfc((x - mu) / sigma) + bkg
+
+    # Parametri iniziali per curve_fit
+    initial_guess = [np.mean(bin_centers_fit), np.std(bin_centers_fit), np.max(counts_fit), np.min(counts_fit)]
+
+    # Eseguire il fit con curve_fit
+    params, covariance = curve_fit(fit_function, bin_centers_fit, counts_fit, p0=initial_guess, sigma=sigma_counts_fit)
+
+    # Parametri ottimizzati
+    mu, sigma, rate, bkg = params
+    mu_err, sigma_err, rate_err, bkg_err = np.sqrt(np.diag(covariance))
+
+    print("Parametri ottimizzati con curve_fit:")
+    print(f"mu = {mu} ± {mu_err}")
+    print(f"sigma = {sigma} ± {sigma_err}")
+    print(f"rate = {rate} ± {rate_err}")
+    print(f"bkg = {bkg} ± {bkg_err}")
+
+    # Generare il modello con i parametri ottimizzati
+    x_fit = np.linspace(xmin, xmax, 1000)
+    y_fit = fit_function(x_fit, *params)
+
+    # Plot dei dati e del fit
+    if plot == 'yes':
+        plt.bar(bin_centers, counts, width=(bin_centers[1] - bin_centers[0]), alpha=0.6, label="Data")
+        plt.plot(x_fit, y_fit, label='Error function fit', color='red', lw=2)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.title(titolo)
+        plt.grid(True)
+        plt.legend()
+        plt.show()
+
+    return params, np.sqrt(np.diag(covariance))
 
 #SOTTRAZIONE BACKGROUND
 def background(data, fondo, bins=None, xlabel="X-axis", ylabel="Counts", titolo='Title'):
