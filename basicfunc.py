@@ -56,7 +56,7 @@ def chi2(model, params, x, y, sx=None, sy=None):
 
 #NORMAL DISTRIBUTION
 def normal(data=None, bin_centers=None, counts=None, xlabel="X-axis", ylabel="Y-axis", titolo='title', 
-           xmin=None, xmax=None, x1=None, x2=None, b=None, n=None, plot='yes'):
+           xmin=None, xmax=None, x1=None, x2=None, b=None, n=None, plot=False):
     if data is not None:
         frame = inspect.currentframe().f_back
         var_name = [name for name, val in frame.f_locals.items() if val is data][0]
@@ -127,7 +127,7 @@ def normal(data=None, bin_centers=None, counts=None, xlabel="X-axis", ylabel="Y-
         x_fit = np.linspace(bin_centers[0], bin_centers[-1], 10000)
     y_fit = gaussian(x_fit, *params)
 
-    if plot == 'yes':
+    if plot:
         # Plot dell'istogramma e del fit
         plt.bar(bin_centers, counts, width=(bin_centers[1] - bin_centers[0]), alpha=0.6, label="Data")
         plt.plot(x_fit, y_fit, color='red', label='Gaussian fit', lw=2)
@@ -165,7 +165,7 @@ def normal(data=None, bin_centers=None, counts=None, xlabel="X-axis", ylabel="Y-
 
 #fit spalla compton
 def compton_minuit(data=None, bin_centers=None, counts=None, xlabel="X-axis", ylabel="Y-axis", titolo='title', 
-                   xmin=None, xmax=None, x1=None, x2=None, b=None, n=None, plot='yes'):
+                   xmin=None, xmax=None, x1=None, x2=None, b=None, n=None, plot=False):
     if data is not None:
         frame = inspect.currentframe().f_back
         var_name = [name for name, val in frame.f_locals.items() if val is data][0]
@@ -246,7 +246,7 @@ def compton_minuit(data=None, bin_centers=None, counts=None, xlabel="X-axis", yl
     print(f"Integrale dell'istogramma nel range [{lower_bound}, {upper_bound}] = {integral} ± {integral_uncertainty}")
 
     # Plot dei dati e del fit
-    if plot == 'yes':
+    if plot:
         plt.bar(bin_centers, counts, width=(bin_centers[1] - bin_centers[0]), alpha=0.6, label="Data")
         plt.plot(x_fit, y_fit, label='Error function fit', color='red', lw=2)
         plt.xlabel(xlabel)
@@ -267,7 +267,7 @@ def compton_minuit(data=None, bin_centers=None, counts=None, xlabel="X-axis", yl
 
 #fit spalla compton con curve_fit
 def compton_curvefit(data=None, bin_centers=None, counts=None, xlabel="X-axis", ylabel="Y-axis", titolo='title', 
-                     xmin=None, xmax=None, x1=None, x2=None, b=None, n=None, plot='yes'):
+                     xmin=None, xmax=None, x1=None, x2=None, b=None, n=None, plot=False):
     if data is not None:
         frame = inspect.currentframe().f_back
         var_name = [name for name, val in frame.f_locals.items() if val is data][0]
@@ -332,7 +332,7 @@ def compton_curvefit(data=None, bin_centers=None, counts=None, xlabel="X-axis", 
     print(f"Integrale dell'istogramma nel range [{lower_bound}, {upper_bound}] = {integral} ± {integral_uncertainty}")
 
     # Plot dei dati e del fit
-    if plot == 'yes':
+    if plot:
         plt.bar(bin_centers, counts, width=(bin_centers[1] - bin_centers[0]), alpha=0.6, label="Data")
         plt.plot(x_fit, y_fit, label='Error function fit', color='red', lw=2)
         plt.xlabel(xlabel)
@@ -390,7 +390,7 @@ def background(data, fondo, bins=None, xlabel="X-axis", ylabel="Counts", titolo=
     return bin_centers, corrected_hist
 
 # REGRESSIONE LINEARE
-def linear_regression(x, y, sx=None, sy=None, xlabel="X-axis", ylabel="Y-axis", titolo='title', plot='yes'):
+def linear_regression(x, y, sx=None, sy=None, xlabel="X-axis", ylabel="Y-axis", titolo='title', plot=False):
     # Gestione degli errori
     if sx is None or np.all(sx == 0):
         sx = np.zeros_like(x)
@@ -445,7 +445,7 @@ def linear_regression(x, y, sx=None, sy=None, xlabel="X-axis", ylabel="Y-axis", 
     else: print(f'Non ha senso calcolare il chi2 ridotto')
 
     # Plot dei dati e del fit
-    if plot == 'yes':
+    if plot:
         plt.figure(figsize=(6.4, 4.8))
         if fit_with_weights:
             plt.errorbar(x, y, xerr=sx if np.any(sx != 0) else None,
